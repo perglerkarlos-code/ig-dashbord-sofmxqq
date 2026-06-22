@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>@sofmxqq — IG Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0d0d0d; --surface: #161616; --surface2: #1e1e1e;
+      --border: #2a2a2a; --accent: #a855f7; --accent2: #9333ea;
+      --accent-glow: rgba(168,85,247,0.18);
+      --text: #f0f0f0; --muted: #888;
+      --green: #22c55e; --red: #ef4444; --blue: #3b82f6; --orange: #f97316;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+    .header { background: linear-gradient(135deg, #1a0a2e 0%, #0d0d0d 60%); border-bottom: 1px solid var(--border); padding: 32px 40px; display: flex; align-items: center; gap: 24px; }
+    .header-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; color: #fff; box-shadow: 0 0 30px var(--accent-glow); flex-shrink: 0; }
+    .header-info { flex: 1; }
+    .header-handle { font-size: 28px; font-weight: 800; background: linear-gradient(135deg, #fff, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .header-name { color: var(--muted); font-size: 15px; margin-top: 4px; }
+    .header-meta { display: flex; align-items: center; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+    .header-badge { background: var(--accent-glow); border: 1px solid var(--accent); color: var(--accent); font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+    .header-updated { color: var(--muted); font-size: 12px; }
+    .header-refresh { margin-left: auto; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); font-size: 12px; padding: 6px 14px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+    .header-refresh:hover { border-color: var(--accent); color: var(--accent); }
+    .container { max-width: 1400px; margin: 0 auto; padding: 32px 40px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px 20px; position: relative; overflow: hidden; }
+    .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+    .stat-card.c1::before { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+    .stat-card.c2::before { background: linear-gradient(90deg, var(--blue), #6366f1); }
+    .stat-card.c3::before { background: linear-gradient(90deg, var(--green), #16a34a); }
+    .stat-card.c4::before { background: linear-gradient(90deg, var(--orange), #ea580c); }
+    .stat-icon { position:absolute; right:18px; top:18px; font-size:36px; opacity:0.12; user-select:none; }
+    .stat-label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:10px; }
+    .stat-value { font-size:32px; font-weight:800; line-height:1; }
+    .stat-card.c1 .stat-value { color: var(--accent); }
+    .stat-card.c2 .stat-value { color: var(--blue); }
+    .stat-card.c3 .stat-value { color: var(--green); }
+    .stat-card.c4 .stat-value { color: var(--orange); }
+    .stat-sub { font-size:12px; color:var(--muted); margin-top:6px; }
+    .stat-change { font-size:12px; font-weight:600; margin-top:5px; }
+    .stat-change.up { color: var(--green); } .stat-change.down { color: var(--red); } .stat-change.flat { color: var(--muted); }
+    .filters { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+    .filter-btn { background:var(--surface2); border:1px solid var(--border); color:var(--muted); font-size:12px; padding:5px 14px; border-radius:20px; cursor:pointer; transition:all 0.2s; }
+    .filter-btn.active, .filter-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-glow); }
+    .charts-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+    .chart-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px; }
+    .chart-title { font-size:14px; font-weight:600; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+    .chart-title span { color:var(--muted); font-weight:400; font-size:12px; }
+    .chart-wrap { position:relative; height:200px; }
+    .posts-section { margin-bottom:28px; }
+    .posts-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; padding-bottom:10px; border-bottom:1px solid var(--border); gap:12px; flex-wrap:wrap; }
+    .posts-header h2 { font-size:16px; font-weight:700; }
+    .posts-header-right { display:flex; align-items:center; gap:10px; }
+    .posts-count { font-size:12px; color:var(--muted); }
+    .btn-csv { background:var(--surface2); border:1px solid var(--border); color:var(--muted); font-size:12px; padding:5px 12px; border-radius:8px; cursor:pointer; transition:all 0.2s; }
+    .btn-csv:hover { border-color:var(--accent); color:var(--accent); }
+    .table-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    thead th { text-align:left; padding:10px 14px; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.6px; border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; }
+    thead th:hover { color:var(--accent); }
+    tbody tr { border-bottom:1px solid rgba(42,42,42,0.6); transition:background 0.15s; }
+    tbody tr:hover { background:var(--accent-glow); }
+    tbody td { padding:10px 14px; vertical-align:middle; }
+    .td-thumb { width:44px; }
+    .td-thumb img { width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid var(--border); display:block; }
+    .td-thumb .thumb-fallback { width:40px; height:40px; background:var(--surface2); border-radius:6px; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:18px; }
+    .td-code a { color:var(--accent); text-decoration:none; font-weight:600; font-size:12px; font-family:monospace; }
+    .td-code a:hover { text-decoration:underline; }
+    .type-badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; white-space:nowrap; }
+    .type-badge.video { background:var(--accent-glow); border:1px solid var(--accent); color:var(--accent); }
+    .type-badge.image { background:rgba(59,130,246,0.12); border:1px solid #3b82f6; color:#3b82f6; }
+    .metric-bar { min-width:120px; }
+    .metric-bar > span { font-weight:700; font-size:13px; display:block; margin-bottom:5px; }
+    .bar-bg { background:rgba(42,42,56,0.8); border-radius:4px; height:5px; overflow:hidden; }
+    .bar-fill { height:100%; border-radius:4px; background:linear-gradient(90deg, var(--accent), var(--accent2)); transition:width 0.6s ease; }
+    .td-caption { max-width:220px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:var(--muted); font-size:12px; }
+    .td-date { color:var(--muted); font-size:12px; white-space:nowrap; }
+    .td-num { font-weight:600; }
+    .footer { background:var(--surface); border-top:1px solid var(--border); padding:20px 40px; text-align:center; color:var(--muted); font-size:13px; }
+    .footer strong { color:var(--accent); }
+    @media(max-width:1100px){ .stats-grid{grid-template-columns:repeat(2,1fr);} }
+    @media(max-width:700px){ .header{padding:20px;flex-direction:column;text-align:center;} .container{padding:16px 12px;} .charts-row{grid-template-columns:1fr;} .stats-grid{grid-template-columns:1fr 1fr;} }
+  </style>
+</head>
+<body>
+<div class="header">
+  <div class="header-avatar">S</div>
+  <div class="header-info">
+    <div class="header-handle">@sofmxqq</div>
+    <div class="header-name">Sofia</div>
+    <div class="header-meta">
+      <span class="header-badge">🟢 Aktivni</span>
+      <span class="header-updated" id="lastUpdated">-</span>
+    </div>
+  </div>
+  <button class="header-refresh" onclick="location.reload()">Obnovit</button>
+</div>
+
+<div class="container">
+  <div class="stats-grid">
+    <div class="stat-card c1">
+      <div class="stat-icon">&#128101;</div>
+      <div class="stat-label">Followers</div>
+      <div class="stat-value" id="statFollowers">-</div>
+      <div class="stat-sub">celkem sledujicich</div>
+      <div class="stat-change flat" id="statFollowersChange">-</div>
+    </div>
+    <div class="stat-card c2">
+      <div class="stat-icon">&#9654;&#65039;</div>
+      <div class="stat-label">Celkove views</div>
+      <div class="stat-value" id="statViews">-</div>
+      <div class="stat-sub">pres vsechny reely</div>
+    </div>
+    <div class="stat-card c3">
+      <div class="stat-icon">&#128200;</div>
+      <div class="stat-label">Growth Rate</div>
+      <div class="stat-value" id="statGrowth7d" style="font-size:26px">-</div>
+      <div class="stat-sub" id="statGrowth7dAbs">za 7 dni</div>
+    </div>
+    <div class="stat-card c4">
+      <div class="stat-icon">&#128202;</div>
+      <div class="stat-label">Avg Likes/Post</div>
+      <div class="stat-value" id="statEngagement">-</div>
+      <div class="stat-sub">prumer na prispevek</div>
+    </div>
+  </div>
+
+  <div class="filters" id="typeFilters">
+    <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">Vse</button>
+    <button class="filter-btn" data-filter="Video" onclick="setFilter('Video',this)">Reely</button>
+    <button class="filter-btn" data-filter="Image" onclick="setFilter('Image',this)">Fotky</button>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-title">Rust sledujicich <span>poslednich 30 dni</span></div>
+      <div class="chart-wrap"><canvas id="followersChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Views + Likes podle data <span id="chartSubtitle">vsechny posty</span></div>
+      <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="charts-row" style="margin-bottom:28px">
+    <div class="chart-card">
+      <div class="chart-title">Nejlepsi den na post <span>prumerne likes podle dne v tydnu</span></div>
+      <div class="chart-wrap"><canvas id="weekdayChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Nejlepsi hodina na post <span>prumerne likes podle hodiny</span></div>
+      <div class="chart-wrap"><canvas id="hourChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="posts-section">
+    <div class="posts-header">
+      <h2>Posty</h2>
+      <div class="posts-header-right">
+        <span class="posts-count" id="postsCount">-</span>
+        <button class="btn-csv" onclick="exportCSV()">Export CSV</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th onclick="sortBy('shortCode')">ShortCode</th>
+            <th>Typ</th>
+            <th onclick="sortBy('likes')">Likes</th>
+            <th onclick="sortBy('videoViewCount')">Views</th>
+            <th onclick="sortBy('comments')">Komentar</th>
+            <th>Caption</th>
+            <th onclick="sortBy('timestamp')">Datum</th>
+          </tr>
+        </thead>
+        <tbody id="postsTableBody">
+          <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:40px">Nacitani...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <strong>@sofmxqq</strong> IG Content Agent Dashboard
+  &nbsp; <span id="footerCount">-</span> postu sledovano
+  &nbsp; auto-refresh za <span id="refreshCountdown">60:00</span>
+</div>
+
+<script>
+const USERNAME = 'sofmxqq';
+const CHART_RGB = '168,85,247';
+const BAR_RGB = '168,85,247';
+
+let allPosts = [];
+let filteredPosts = [];
+let activeFilter = 'all';
+let sortField = 'timestamp';
+let sortDir = -1;
+let last30 = [];
+let mainChartInstance = null;
+
+function fmt(n){ if(n==null||isNaN(n))return'0'; if(n>=1000000)return(n/1000000).toFixed(1)+'M'; if(n>=1000)return(n/1000).toFixed(1)+'K'; return n.toLocaleString('cs-CZ'); }
+function fmtDate(iso){ if(!iso)return'-'; return new Date(iso).toLocaleDateString('cs-CZ',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+async function loadJSON(p){ try{const r=await fetch(p+'?t='+Date.now());if(!r.ok)return null;return await r.json();}catch{return null;} }
+
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilter();
+  redrawMainChart();
+}
+
+function applyFilter() {
+  filteredPosts = activeFilter === 'all' ? [...allPosts] : allPosts.filter(p => p.type === activeFilter);
+  sortAndRender();
+}
+
+function sortBy(field) {
+  if(sortField === field) sortDir *= -1; else { sortField = field; sortDir = -1; }
+  sortAndRender();
+}
+
+function sortAndRender() {
+  filteredPosts.sort((a,b) => {
+    let av = a[sortField], bv = b[sortField];
+    if(sortField === 'timestamp') { av = new Date(av||0); bv = new Date(bv||0); }
+    if(av < bv) return sortDir; if(av > bv) return -sortDir; return 0;
+  });
+  document.getElementById('postsCount').textContent = filteredPosts.length + ' postu';
+  renderTable();
+}
+
+function renderTable() {
+  const maxLikes = Math.max(...filteredPosts.map(p=>p.likes||0),1);
+  const tbody = document.getElementById('postsTableBody');
+  tbody.innerHTML = '';
+  filteredPosts.forEach(p => {
+    const likes = p.likes||0;
+    const pct = Math.round((likes/maxLikes)*100);
+    const isVideo = p.type === 'Video';
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td class="td-thumb">' +
+        '<img src="https://www.instagram.com/p/'+p.shortCode+'/media/?size=t" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'" loading="lazy" />' +
+        '<div class="thumb-fallback" style="display:none">'+(isVideo?'&#127909;':'&#128248;')+'</div>' +
+      '</td>' +
+      '<td class="td-code"><a href="'+(p.url||'#')+'" target="_blank" rel="noopener">'+(p.shortCode||'-')+'</a></td>' +
+      '<td><span class="type-badge '+(isVideo?'video':'image')+'">'+(p.type||'Image')+'</span></td>' +
+      '<td><div class="metric-bar"><span>'+fmt(likes)+'</span><div class="bar-bg"><div class="bar-fill" style="width:'+pct+'%"></div></div></div></td>' +
+      '<td class="td-num">'+(p.videoViewCount?fmt(p.videoViewCount):'-')+'</td>' +
+      '<td class="td-num">'+fmt(p.comments||0)+'</td>' +
+      '<td class="td-caption" title="'+(p.caption||'').replace(/"/g,'&quot;')+'">'+(p.caption||'-')+'</td>' +
+      '<td class="td-date">'+fmtDate(p.timestamp)+'</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function redrawMainChart() {
+  if(mainChartInstance){ mainChartInstance.destroy(); mainChartInstance = null; }
+  const src = activeFilter === 'all' ? allPosts : allPosts.filter(p => p.type === activeFilter);
+  document.getElementById('chartSubtitle').textContent = activeFilter === 'Video' ? 'pouze reely' : activeFilter === 'Image' ? 'pouze fotky' : 'vsechny posty';
+  const dayLikes={}, dayViews={};
+  src.forEach(p=>{
+    if(!p.timestamp) return;
+    const day = p.timestamp.slice(0,10);
+    dayLikes[day] = (dayLikes[day]||0) + (p.likes||0);
+    dayViews[day] = (dayViews[day]||0) + (p.videoViewCount||0);
+  });
+  mainChartInstance = new Chart(document.getElementById('mainChart'),{
+    type:'bar',
+    data:{
+      labels: last30.map(d=>d.slice(5)),
+      datasets:[
+        {label:'Likes', data:last30.map(d=>dayLikes[d]||0), backgroundColor:'rgba('+BAR_RGB+',0.7)', borderRadius:3, borderSkipped:false},
+        {label:'Views', data:last30.map(d=>dayViews[d]||0), backgroundColor:'rgba(59,130,246,0.5)', borderRadius:3, borderSkipped:false}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#888',font:{size:11}}},tooltip:{backgroundColor:'#1e1e1e',borderColor:'#2a2a2a',borderWidth:1,titleColor:'#888',bodyColor:'#f0f0f0'}},
+      scales:{x:{ticks:{color:'#888',maxTicksLimit:8,font:{size:11}},grid:{display:false}},y:{ticks:{color:'#888',font:{size:11},callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,0.04)'}}}}
+  });
+}
+
+function exportCSV(){
+  const rows=[['ShortCode','URL','Typ','Likes','Views','Komentare','Caption','Datum']];
+  filteredPosts.forEach(p=>{ rows.push([p.shortCode||'',p.url||'',p.type||'',p.likes||0,p.videoViewCount||0,p.comments||0,'"'+(p.caption||'').replace(/"/g,'""')+'"',fmtDate(p.timestamp)]); });
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=USERNAME+'_posts_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+(async()=>{
+  const [data,history]=await Promise.all([loadJSON('data.json'),loadJSON('followers-history.json')]);
+  if(!data){ document.getElementById('postsTableBody').innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--red);padding:40px">Nelze nacist data.json</td></tr>'; return; }
+
+  allPosts = data.myTopPosts||[];
+  filteredPosts = [...allPosts];
+
+  const lastHistory = history&&history.length ? history[history.length-1] : null;
+  const followers = lastHistory?.count??0;
+
+  const sortedPosts = [...allPosts].sort((a,b)=>new Date(b.timestamp||0)-new Date(a.timestamp||0));
+  document.getElementById('lastUpdated').textContent = sortedPosts[0]?.timestamp ? 'Posledni post: '+fmtDate(sortedPosts[0].timestamp) : '';
+
+  const totalViews = allPosts.reduce((s,p)=>s+(p.videoViewCount||0),0);
+  const totalLikes = allPosts.reduce((s,p)=>s+(p.likes||0),0);
+  const avgLikes = allPosts.length ? Math.round(totalLikes/allPosts.length) : 0;
+
+  document.getElementById('statFollowers').textContent = fmt(followers);
+  document.getElementById('statViews').textContent = fmt(totalViews);
+  document.getElementById('statEngagement').textContent = fmt(avgLikes);
+  document.getElementById('postsCount').textContent = allPosts.length+' postu';
+  document.getElementById('footerCount').textContent = allPosts.length;
+
+  if(history&&history.length>=2){
+    const last=history[history.length-1];
+    const weekAgo=history.find(h=>{const diff=(new Date(last.date)-new Date(h.date))/864e5;return diff>=6&&diff<=8;});
+    if(weekAgo){
+      const diff=last.count-weekAgo.count;
+      const el=document.getElementById('statFollowersChange');
+      if(diff>0){el.textContent='+'+diff+' tento tyden';el.className='stat-change up';}
+      else if(diff<0){el.textContent=diff+' tento tyden';el.className='stat-change down';}
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>@sofmxqq — IG Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0d0d0d; --surface: #161616; --surface2: #1e1e1e;
+      --border: #2a2a2a; --accent: #a855f7; --accent2: #9333ea;
+      --accent-glow: rgba(168,85,247,0.18);
+      --text: #f0f0f0; --muted: #888;
+      --green: #22c55e; --red: #ef4444; --blue: #3b82f6; --orange: #f97316;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+    .header { background: linear-gradient(135deg, #1a0a2e 0%, #0d0d0d 60%); border-bottom: 1px solid var(--border); padding: 32px 40px; display: flex; align-items: center; gap: 24px; }
+    .header-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; color: #fff; box-shadow: 0 0 30px var(--accent-glow); flex-shrink: 0; }
+    .header-info { flex: 1; }
+    .header-handle { font-size: 28px; font-weight: 800; background: linear-gradient(135deg, #fff, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .header-name { color: var(--muted); font-size: 15px; margin-top: 4px; }
+    .header-meta { display: flex; align-items: center; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+    .header-badge { background: var(--accent-glow); border: 1px solid var(--accent); color: var(--accent); font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+    .header-updated { color: var(--muted); font-size: 12px; }
+    .header-refresh { margin-left: auto; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); font-size: 12px; padding: 6px 14px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+    .header-refresh:hover { border-color: var(--accent); color: var(--accent); }
+    .container { max-width: 1400px; margin: 0 auto; padding: 32px 40px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px 20px; position: relative; overflow: hidden; }
+    .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+    .stat-card.c1::before { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+    .stat-card.c2::before { background: linear-gradient(90deg, var(--blue), #6366f1); }
+    .stat-card.c3::before { background: linear-gradient(90deg, var(--green), #16a34a); }
+    .stat-card.c4::before { background: linear-gradient(90deg, var(--orange), #ea580c); }
+    .stat-icon { position:absolute; right:18px; top:18px; font-size:36px; opacity:0.12; user-select:none; }
+    .stat-label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:10px; }
+    .stat-value { font-size:32px; font-weight:800; line-height:1; }
+    .stat-card.c1 .stat-value { color: var(--accent); }
+    .stat-card.c2 .stat-value { color: var(--blue); }
+    .stat-card.c3 .stat-value { color: var(--green); }
+    .stat-card.c4 .stat-value { color: var(--orange); }
+    .stat-sub { font-size:12px; color:var(--muted); margin-top:6px; }
+    .stat-change { font-size:12px; font-weight:600; margin-top:5px; }
+    .stat-change.up { color: var(--green); } .stat-change.down { color: var(--red); } .stat-change.flat { color: var(--muted); }
+    .filters { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+    .filter-btn { background:var(--surface2); border:1px solid var(--border); color:var(--muted); font-size:12px; padding:5px 14px; border-radius:20px; cursor:pointer; transition:all 0.2s; }
+    .filter-btn.active, .filter-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-glow); }
+    .charts-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+    .chart-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px; }
+    .chart-title { font-size:14px; font-weight:600; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+    .chart-title span { color:var(--muted); font-weight:400; font-size:12px; }
+    .chart-wrap { position:relative; height:200px; }
+    .posts-section { margin-bottom:28px; }
+    .posts-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; padding-bottom:10px; border-bottom:1px solid var(--border); gap:12px; flex-wrap:wrap; }
+    .posts-header h2 { font-size:16px; font-weight:700; }
+    .posts-header-right { display:flex; align-items:center; gap:10px; }
+    .posts-count { font-size:12px; color:var(--muted); }
+    .btn-csv { background:var(--surface2); border:1px solid var(--border); color:var(--muted); font-size:12px; padding:5px 12px; border-radius:8px; cursor:pointer; transition:all 0.2s; }
+    .btn-csv:hover { border-color:var(--accent); color:var(--accent); }
+    .table-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    thead th { text-align:left; padding:10px 14px; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.6px; border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; }
+    thead th:hover { color:var(--accent); }
+    tbody tr { border-bottom:1px solid rgba(42,42,42,0.6); transition:background 0.15s; }
+    tbody tr:hover { background:var(--accent-glow); }
+    tbody td { padding:10px 14px; vertical-align:middle; }
+    .td-thumb { width:44px; }
+    .td-thumb img { width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid var(--border); display:block; }
+    .td-thumb .thumb-fallback { width:40px; height:40px; background:var(--surface2); border-radius:6px; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:18px; }
+    .td-code a { color:var(--accent); text-decoration:none; font-weight:600; font-size:12px; font-family:monospace; }
+    .td-code a:hover { text-decoration:underline; }
+    .type-badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; white-space:nowrap; }
+    .type-badge.video { background:var(--accent-glow); border:1px solid var(--accent); color:var(--accent); }
+    .type-badge.image { background:rgba(59,130,246,0.12); border:1px solid #3b82f6; color:#3b82f6; }
+    .metric-bar { min-width:120px; }
+    .metric-bar > span { font-weight:700; font-size:13px; display:block; margin-bottom:5px; }
+    .bar-bg { background:rgba(42,42,56,0.8); border-radius:4px; height:5px; overflow:hidden; }
+    .bar-fill { height:100%; border-radius:4px; background:linear-gradient(90deg, var(--accent), var(--accent2)); transition:width 0.6s ease; }
+    .td-caption { max-width:220px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:var(--muted); font-size:12px; }
+    .td-date { color:var(--muted); font-size:12px; white-space:nowrap; }
+    .td-num { font-weight:600; }
+    .footer { background:var(--surface); border-top:1px solid var(--border); padding:20px 40px; text-align:center; color:var(--muted); font-size:13px; }
+    .footer strong { color:var(--accent); }
+    @media(max-width:1100px){ .stats-grid{grid-template-columns:repeat(2,1fr);} }
+    @media(max-width:700px){ .header{padding:20px;flex-direction:column;text-align:center;} .container{padding:16px 12px;} .charts-row{grid-template-columns:1fr;} .stats-grid{grid-template-columns:1fr 1fr;} }
+  </style>
+</head>
+<body>
+<div class="header">
+  <div class="header-avatar">S</div>
+  <div class="header-info">
+    <div class="header-handle">@sofmxqq</div>
+    <div class="header-name">Sofia</div>
+    <div class="header-meta">
+      <span class="header-badge">🟢 Aktivni</span>
+      <span class="header-updated" id="lastUpdated">-</span>
+    </div>
+  </div>
+  <button class="header-refresh" onclick="location.reload()">Obnovit</button>
+</div>
+
+<div class="container">
+  <div class="stats-grid">
+    <div class="stat-card c1">
+      <div class="stat-icon">&#128101;</div>
+      <div class="stat-label">Followers</div>
+      <div class="stat-value" id="statFollowers">-</div>
+      <div class="stat-sub">celkem sledujicich</div>
+      <div class="stat-change flat" id="statFollowersChange">-</div>
+    </div>
+    <div class="stat-card c2">
+      <div class="stat-icon">&#9654;&#65039;</div>
+      <div class="stat-label">Celkove views</div>
+      <div class="stat-value" id="statViews">-</div>
+      <div class="stat-sub">pres vsechny reely</div>
+    </div>
+    <div class="stat-card c3">
+      <div class="stat-icon">&#128200;</div>
+      <div class="stat-label">Growth Rate</div>
+      <div class="stat-value" id="statGrowth7d" style="font-size:26px">-</div>
+      <div class="stat-sub" id="statGrowth7dAbs">za 7 dni</div>
+    </div>
+    <div class="stat-card c4">
+      <div class="stat-icon">&#128202;</div>
+      <div class="stat-label">Avg Likes/Post</div>
+      <div class="stat-value" id="statEngagement">-</div>
+      <div class="stat-sub">prumer na prispevek</div>
+    </div>
+  </div>
+
+  <div class="filters" id="typeFilters">
+    <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">Vse</button>
+    <button class="filter-btn" data-filter="Video" onclick="setFilter('Video',this)">Reely</button>
+    <button class="filter-btn" data-filter="Image" onclick="setFilter('Image',this)">Fotky</button>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-title">Rust sledujicich <span>poslednich 30 dni</span></div>
+      <div class="chart-wrap"><canvas id="followersChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Views + Likes podle data <span id="chartSubtitle">vsechny posty</span></div>
+      <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="charts-row" style="margin-bottom:28px">
+    <div class="chart-card">
+      <div class="chart-title">Nejlepsi den na post <span>prumerne likes podle dne v tydnu</span></div>
+      <div class="chart-wrap"><canvas id="weekdayChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Nejlepsi hodina na post <span>prumerne likes podle hodiny</span></div>
+      <div class="chart-wrap"><canvas id="hourChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="posts-section">
+    <div class="posts-header">
+      <h2>Posty</h2>
+      <div class="posts-header-right">
+        <span class="posts-count" id="postsCount">-</span>
+        <button class="btn-csv" onclick="exportCSV()">Export CSV</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th onclick="sortBy('shortCode')">ShortCode</th>
+            <th>Typ</th>
+            <th onclick="sortBy('likes')">Likes</th>
+            <th onclick="sortBy('videoViewCount')">Views</th>
+            <th onclick="sortBy('comments')">Komentar</th>
+            <th>Caption</th>
+            <th onclick="sortBy('timestamp')">Datum</th>
+          </tr>
+        </thead>
+        <tbody id="postsTableBody">
+          <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:40px">Nacitani...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <strong>@sofmxqq</strong> IG Content Agent Dashboard
+  &nbsp; <span id="footerCount">-</span> postu sledovano
+  &nbsp; auto-refresh za <span id="refreshCountdown">60:00</span>
+</div>
+
+<script>
+const USERNAME = 'sofmxqq';
+const CHART_RGB = '168,85,247';
+const BAR_RGB = '168,85,247';
+
+let allPosts = [];
+let filteredPosts = [];
+let activeFilter = 'all';
+let sortField = 'timestamp';
+let sortDir = -1;
+let last30 = [];
+let mainChartInstance = null;
+
+function fmt(n){ if(n==null||isNaN(n))return'0'; if(n>=1000000)return(n/1000000).toFixed(1)+'M'; if(n>=1000)return(n/1000).toFixed(1)+'K'; return n.toLocaleString('cs-CZ'); }
+function fmtDate(iso){ if(!iso)return'-'; return new Date(iso).toLocaleDateString('cs-CZ',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+async function loadJSON(p){ try{const r=await fetch(p+'?t='+Date.now());if(!r.ok)return null;return await r.json();}catch{return null;} }
+
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilter();
+  redrawMainChart();
+}
+
+function applyFilter() {
+  filteredPosts = activeFilter === 'all' ? [...allPosts] : allPosts.filter(p => p.type === activeFilter);
+  sortAndRender();
+}
+
+function sortBy(field) {
+  if(sortField === field) sortDir *= -1; else { sortField = field; sortDir = -1; }
+  sortAndRender();
+}
+
+function sortAndRender() {
+  filteredPosts.sort((a,b) => {
+    let av = a[sortField], bv = b[sortField];
+    if(sortField === 'timestamp') { av = new Date(av||0); bv = new Date(bv||0); }
+    if(av < bv) return sortDir; if(av > bv) return -sortDir; return 0;
+  });
+  document.getElementById('postsCount').textContent = filteredPosts.length + ' postu';
+  renderTable();
+}
+
+function renderTable() {
+  const maxLikes = Math.max(...filteredPosts.map(p=>p.likes||0),1);
+  const tbody = document.getElementById('postsTableBody');
+  tbody.innerHTML = '';
+  filteredPosts.forEach(p => {
+    const likes = p.likes||0;
+    const pct = Math.round((likes/maxLikes)*100);
+    const isVideo = p.type === 'Video';
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td class="td-thumb">' +
+        '<img src="https://www.instagram.com/p/'+p.shortCode+'/media/?size=t" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'" loading="lazy" />' +
+        '<div class="thumb-fallback" style="display:none">'+(isVideo?'&#127909;':'&#128248;')+'</div>' +
+      '</td>' +
+      '<td class="td-code"><a href="'+(p.url||'#')+'" target="_blank" rel="noopener">'+(p.shortCode||'-')+'</a></td>' +
+      '<td><span class="type-badge '+(isVideo?'video':'image')+'">'+(p.type||'Image')+'</span></td>' +
+      '<td><div class="metric-bar"><span>'+fmt(likes)+'</span><div class="bar-bg"><div class="bar-fill" style="width:'+pct+'%"></div></div></div></td>' +
+      '<td class="td-num">'+(p.videoViewCount?fmt(p.videoViewCount):'-')+'</td>' +
+      '<td class="td-num">'+fmt(p.comments||0)+'</td>' +
+      '<td class="td-caption" title="'+(p.caption||'').replace(/"/g,'&quot;')+'">'+(p.caption||'-')+'</td>' +
+      '<td class="td-date">'+fmtDate(p.timestamp)+'</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function redrawMainChart() {
+  if(mainChartInstance){ mainChartInstance.destroy(); mainChartInstance = null; }
+  const src = activeFilter === 'all' ? allPosts : allPosts.filter(p => p.type === activeFilter);
+  document.getElementById('chartSubtitle').textContent = activeFilter === 'Video' ? 'pouze reely' : activeFilter === 'Image' ? 'pouze fotky' : 'vsechny posty';
+  const dayLikes={}, dayViews={};
+  src.forEach(p=>{
+    if(!p.timestamp) return;
+    const day = p.timestamp.slice(0,10);
+    dayLikes[day] = (dayLikes[day]||0) + (p.likes||0);
+    dayViews[day] = (dayViews[day]||0) + (p.videoViewCount||0);
+  });
+  mainChartInstance = new Chart(document.getElementById('mainChart'),{
+    type:'bar',
+    data:{
+      labels: last30.map(d=>d.slice(5)),
+      datasets:[
+        {label:'Likes', data:last30.map(d=>dayLikes[d]||0), backgroundColor:'rgba('+BAR_RGB+',0.7)', borderRadius:3, borderSkipped:false},
+        {label:'Views', data:last30.map(d=>dayViews[d]||0), backgroundColor:'rgba(59,130,246,0.5)', borderRadius:3, borderSkipped:false}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#888',font:{size:11}}},tooltip:{backgroundColor:'#1e1e1e',borderColor:'#2a2a2a',borderWidth:1,titleColor:'#888',bodyColor:'#f0f0f0'}},
+      scales:{x:{ticks:{color:'#888',maxTicksLimit:8,font:{size:11}},grid:{display:false}},y:{ticks:{color:'#888',font:{size:11},callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,0.04)'}}}}
+  });
+}
+
+function exportCSV(){
+  const rows=[['ShortCode','URL','Typ','Likes','Views','Komentare','Caption','Datum']];
+  filteredPosts.forEach(p=>{ rows.push([p.shortCode||'',p.url||'',p.type||'',p.likes||0,p.videoViewCount||0,p.comments||0,'"'+(p.caption||'').replace(/"/g,'""')+'"',fmtDate(p.timestamp)]); });
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=USERNAME+'_posts_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+(async()=>{
+  const [data,history]=await Promise.all([loadJSON('data.json'),loadJSON('followers-history.json')]);
+  if(!data){ document.getElementById('postsTableBody').innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--red);padding:40px">Nelze nacist data.json</td></tr>'; return; }
+
+  allPosts = data.myTopPosts||[];
+  filteredPosts = [...allPosts];
+
+  const lastHistory = history&&history.length ? history[history.length-1] : null;
+  const followers = lastHistory?.count??0;
+
+  const sortedPosts = [...allPosts].sort((a,b)=>new Date(b.timestamp||0)-new Date(a.timestamp||0));
+  document.getElementById('lastUpdated').textContent = sortedPosts[0]?.timestamp ? 'Posledni post: '+fmtDate(sortedPosts[0].timestamp) : '';
+
+  const totalViews = allPosts.reduce((s,p)=>s+(p.videoViewCount||0),0);
+  const totalLikes = allPosts.reduce((s,p)=>s+(p.likes||0),0);
+  const avgLikes = allPosts.length ? Math.round(totalLikes/allPosts.length) : 0;
+
+  document.getElementById('statFollowers').textContent = fmt(followers);
+  document.getElementById('statViews').textContent = fmt(totalViews);
+  document.getElementById('statEngagement').textContent = fmt(avgLikes);
+  document.getElementById('postsCount').textContent = allPosts.length+' postu';
+  document.getElementById('footerCount').textContent = allPosts.length;
+
+  if(history&&history.length>=2){
+    const last=history[history.length-1];
+    const weekAgo=history.find(h=>{const diff=(new Date(last.date)-new Date(h.date))/864e5;return diff>=6&&diff<=8;});
+    if(weekAgo){
+      const diff=last.count-weekAgo.count;
+      const el=document.getElementById('statFollowersChange');
+      if(diff>0){el.textContent='+'+diff+' tento tyden';el.className='stat-change up';}
+      else if(diff<0){el.textContent=diff+' tento tyden';el.className='stat-change down';}
+      else{el.textContent='beze zmeny';el.className='stat-change flat';}
+    }
+    if(weekAgo&&weekAgo.count>0){
+      const rate=((last.count-weekAgo.count)/weekAgo.count*100).toFixed(1);
+      document.getElementById('statGrowth7d').textContent=(rate>0?'+':'')+rate+'%';
+      document.getElementById('statGrowth7dAbs').textContent='+'+(last.count-weekAgo.count)+' followers za 7 dni';
+    }
+  }
+
+  for(let i=29;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);last30.push(d.toISOString().slice(0,10));}
+
+  const histMap={};(history||[]).forEach(h=>{histMap[h.date]=h.count??0;});
+  let lastKnown=null;
+  const fData=last30.map(date=>{if(histMap[date]!==undefined)lastKnown=histMap[date];return lastKnown;});
+  new Chart(document.getElementById('followersChart'),{
+    type:'line',
+    data:{labels:last30.map(d=>d.slice(5)),datasets:[{data:fData,borderColor:'rgba('+CHART_RGB+',0.9)',backgroundColor:'rgba('+CHART_RGB+',0.08)',borderWidth:2,fill:true,tension:0.4,pointRadius:2,pointHoverRadius:5,pointBackgroundColor:'rgba('+CHART_RGB+',0.9)'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1e1e1e',borderColor:'#2a2a2a',borderWidth:1,titleColor:'#888',bodyColor:'#f0f0f0'}},
+      scales:{x:{ticks:{color:'#888',maxTicksLimit:6,font:{size:11}},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#888',font:{size:11}},grid:{color:'rgba(255,255,255,0.04)'}}}}
+  });
+
+  redrawMainChart();
+
+  const DAYS=['Ne','Po','Ut','St','Ct','Pa','So'];
+  const dayLikes={};const dayCounts={};
+  allPosts.forEach(p=>{if(!p.timestamp)return;const dow=new Date(p.timestamp).getDay();dayLikes[dow]=(dayLikes[dow]||0)+(p.likes||0);dayCounts[dow]=(dayCounts[dow]||0)+1;});
+  const dayAvg=DAYS.map((_,i)=>dayCounts[i]?Math.round(dayLikes[i]/dayCounts[i]):0);
+  const maxDayAvg=Math.max(...dayAvg,1);
+  new Chart(document.getElementById('weekdayChart'),{type:'bar',
+    data:{labels:DAYS,datasets:[{data:dayAvg,backgroundColor:dayAvg.map(v=>v===maxDayAvg?'rgba('+BAR_RGB+',0.9)':'rgba('+BAR_RGB+',0.3)'),borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1e1e1e',borderColor:'#2a2a2a',borderWidth:1,titleColor:'#888',bodyColor:'#f0f0f0',callbacks:{label:ctx=>' '+fmt(ctx.raw)+' avg likes'}}},
+      scales:{x:{ticks:{color:'#888',font:{size:11}},grid:{display:false}},y:{ticks:{color:'#888',font:{size:11},callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,0.04)'}}}}
+  });
+
+  const hourLikes={};const hourCounts={};
+  allPosts.forEach(p=>{if(!p.timestamp)return;const h=new Date(p.timestamp).getHours();hourLikes[h]=(hourLikes[h]||0)+(p.likes||0);hourCounts[h]=(hourCounts[h]||0)+1;});
+  const hours=Array.from({length:24},(_,i)=>i);
+  const hourAvg=hours.map(i=>hourCounts[i]?Math.round(hourLikes[i]/hourCounts[i]):0);
+  const maxHourAvg=Math.max(...hourAvg,1);
+  new Chart(document.getElementById('hourChart'),{type:'bar',
+    data:{labels:hours.map(h=>h+':00'),datasets:[{data:hourAvg,backgroundColor:hourAvg.map(v=>v===maxHourAvg?'rgba('+BAR_RGB+',0.9)':'rgba('+BAR_RGB+',0.25)'),borderRadius:4,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1e1e1e',borderColor:'#2a2a2a',borderWidth:1,titleColor:'#888',bodyColor:'#f0f0f0',callbacks:{label:ctx=>' '+fmt(ctx.raw)+' avg likes'}}},
+      scales:{x:{ticks:{color:'#888',maxTicksLimit:12,font:{size:10}},grid:{display:false}},y:{ticks:{color:'#888',font:{size:11},callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,0.04)'}}}}
+  });
+
+  sortAndRender();
+
+  let secs=3600;const countEl=document.getElementById('refreshCountdown');
+  setInterval(()=>{secs--;if(secs<=0){location.reload();return;}const m=Math.floor(secs/60),s=secs%60;countEl.textContent=m+':'+(s<10?'0':'')+s;},1000);
+})();
+</script>
+</body>
+</html>
